@@ -5,12 +5,13 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var testQueries *Queries
-var testDb *pgx.Conn
+var testDb *pgxpool.Pool
 
 const (
 	dbSource = "postgresql://root:root@localhost:5432/simple_bank?sslmode=disable"
@@ -18,24 +19,23 @@ const (
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dbSource)
+	pool, err := pgxpool.New(ctx, dbSource)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer func() {
-		log.Println("closing database")
-		if err := conn.Close(ctx); err != nil {
-			log.Printf("failed to close database: %v\n", err)
-		}
-		log.Println("database closed")
-	}()
+	defer pool.Close()
 
-	if err := conn.Ping(ctx); err != nil {
+	pool.Config().MaxConns = 4
+	pool.Config().MinConns = 1
+	pool.Config().MaxConnLifetime = time.Hour
+	pool.Config().MaxConnIdleTime = 5 * time.Minute
+
+	if err := pool.Ping(ctx); err != nil {
 		log.Printf("failed to connect database: %v\n", err)
 	}
 	log.Println("database connected")
-	testDb = conn
-	testQueries = New(conn)
+	testDb = pool
+	testQueries = New(pool)
 
 	os.Exit(m.Run())
 }

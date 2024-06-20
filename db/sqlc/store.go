@@ -2,24 +2,23 @@ package db
 
 import (
 	"context"
-	"log"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Store struct {
 	*Queries
-	db *pgx.Conn
+	db *pgxpool.Pool
 }
 
-func NewStore(db *pgx.Conn) *Store {
+func NewStore(db *pgxpool.Pool) *Store {
 	return &Store{
 		db:      db,
 		Queries: New(db),
 	}
 }
 
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *Store) execTx(ctx context.Context, fn func(q *Queries) error) error {
 	tx, err := store.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -27,7 +26,6 @@ func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
 	defer tx.Rollback(ctx)
 
 	err = fn(store.Queries.WithTx(tx))
-	log.Println("err execTx", err)
 	if err != nil {
 		return err
 	}
@@ -73,6 +71,7 @@ func (store *Store) TransferTx(ctx context.Context, arg *TransferTxparams) (Tran
 	// membuat transaction dengan menggunakan execTx
 	err := store.execTx(ctx, func(q *Queries) error {
 		var err error
+
 		// membuat transfer
 		result.Transfer, err = q.CreateTransfer(ctx, &CreateTransferParams{
 			FromAccountID: arg.FromAccountID,
@@ -102,8 +101,25 @@ func (store *Store) TransferTx(ctx context.Context, arg *TransferTxparams) (Tran
 			return err
 		}
 
-		// TODO: update account balance
+		// update account
+		// update sender account balance -> sender account.Balance - arg.Amount
+		result.FromAccount, err = q.UpdateAccountBalance(ctx, &UpdateAccountBalanceParams{
+			Amount: -arg.Amount,
+			ID:     arg.FromAccountID,
+		})
+		if err != nil {
+			return err
+		}
 
+		// get account 2
+		// update account 1 balance -> account1.Balance - arg.Amount
+		result.ToAccount, err = q.UpdateAccountBalance(ctx, &UpdateAccountBalanceParams{
+			Amount: arg.Amount,
+			ID:     arg.ToAccountID,
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 

@@ -34,7 +34,7 @@ func RandomOwner() string {
 }
 
 func RandomBalance() int64 {
-	return RandomInt64(1000, 10_000_000)
+	return RandomInt64(1, 10_000)
 }
 
 func RandomEntriesAmount() int64 {

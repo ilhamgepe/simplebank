@@ -12,6 +12,8 @@ psql:
 sqlc:
 	sqlc generate
 
+reset:	down up
+	clear
 create:
 	migrate create -ext sql -seq -dir db/migrations $(name)
 up:
