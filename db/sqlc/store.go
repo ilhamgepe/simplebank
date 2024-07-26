@@ -101,6 +101,29 @@ func (store *Store) TransferTx(ctx context.Context, arg *TransferTxparams) (Tran
 			return err
 		}
 
+		// untuk menghindari deadlock bisa dengan cara mengurutkan id/identifier apapun
+		// jadi tidak ada yang namanya id 1 tf ke id 2 tp ada id 2 tf ke id 1, karna yang di lakukan dari yang kecil dulu
+		// sehingga menghindari deadlock
+		if arg.ToAccountID < arg.FromAccountID {
+			result.ToAccount, err = q.UpdateAccountBalance(ctx, &UpdateAccountBalanceParams{
+				Amount: arg.Amount,
+				ID:     arg.ToAccountID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result.FromAccount, err = q.UpdateAccountBalance(ctx, &UpdateAccountBalanceParams{
+				Amount: -arg.Amount,
+				ID:     arg.FromAccountID,
+			})
+			if err != nil {
+				return err
+			}
+
+			return nil
+		}
+
 		// update account
 		// update sender account balance -> sender account.Balance - arg.Amount
 		result.FromAccount, err = q.UpdateAccountBalance(ctx, &UpdateAccountBalanceParams{

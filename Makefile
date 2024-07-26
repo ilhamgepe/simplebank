@@ -1,5 +1,5 @@
 postgres:
-	docker run --name postgres16 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=root -d postgres:16.3-alpine3.20
+	docker run --name postgres16 -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=root -d postgres:16.3-alpine
 startpg:
 	docker start postgres16
 createdb:
@@ -23,3 +23,6 @@ down:
 
 test:
 	go test -v -cover ./...
+
+exec:
+	docker exec -it postgres16 psql
