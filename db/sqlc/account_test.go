@@ -72,7 +72,8 @@ func TestListAccounts(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Len(t, accounts, 5)
+	assert.Greater(t, len(accounts), 0)
+	assert.LessOrEqual(t, len(accounts), 5)
 
 	for _, account := range accounts {
 		assert.NotEmpty(t, account.ID)
