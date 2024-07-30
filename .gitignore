@@ -1,0 +1,8 @@
+# air generated folder
+/tmp/
+
+# local env
+*.env
+.env
+*.local.env
+
