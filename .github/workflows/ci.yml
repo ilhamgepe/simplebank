@@ -14,8 +14,8 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     env:
-     DB_SOURCE: postgres://root:root@localhost:5432/simple_bank?sslmode=disable
-     SERVER_ADDRESS:8080
+      DB_SOURCE: postgres://root:root@localhost:5432/simple_bank?sslmode=disable
+      SERVER_ADDRESS: 8080
 
     # setup PG from https://docs.github.com/en/actions/using-containerized-services/creating-postgresql-service-containers
     # Service containers to run with `container-job`
