@@ -1,11 +1,10 @@
 package token
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 const minSecretKeySize = 32
@@ -46,16 +45,15 @@ func (maker *JWTMaker) VerifyToken(token string) (*Payload, error) {
 
 	jwtToken, err := jwt.ParseWithClaims(token, &Payload{}, keyFunc)
 	if err != nil {
-		verr, ok := err.(*jwt.ValidationError)
-		if ok && errors.Is(verr.Inner, ErrExpiredToken) {
-			return nil, ErrExpiredToken
-		}
 		return nil, ErrInvalidToken
 	}
 
 	payload, ok := jwtToken.Claims.(*Payload)
 	if !ok {
 		return nil, ErrInvalidToken
+	}
+	if err := payload.Valid(); err != nil {
+		return nil, err
 	}
 
 	return payload, nil

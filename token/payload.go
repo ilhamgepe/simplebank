@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
@@ -19,6 +20,7 @@ type Payload struct {
 	Username  string    `json:"username"`
 	IssuedAt  time.Time `json:"issued_at"`
 	ExpiredAt time.Time `json:"expired_at"`
+	jwt.MapClaims
 }
 
 // NewPayload creates a new token payload with a specific username and duration
