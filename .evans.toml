@@ -1,0 +1,7 @@
+[server]
+host = "localhost"
+port = "9090"
+
+[default]
+package = "pb"
+service = "SimpleBank"
