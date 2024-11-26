@@ -8,6 +8,9 @@ sql:
         package: "db"
         out: "./db/sqlc"
         sql_package: "pgx/v5"
+        overrides:
+          - db_type: "timestamptz"
+            go_type: "time.Time"
         emit_json_tags: true
         emit_prepared_queries: true
         emit_interface: false
