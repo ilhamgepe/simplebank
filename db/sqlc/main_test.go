@@ -14,21 +14,23 @@ const (
 )
 
 var testQueries *Queries
+var testDB *pgxpool.Pool
 
 func TestMain(m *testing.M) {
+	var err error
 	ctx := context.Background()
-	conn, err := pgxpool.New(ctx, dbSource)
+	testDB, err = pgxpool.New(ctx, dbSource)
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	defer testDB.Close()
 
-	conn.Config().MaxConnIdleTime = 5 * 60
-	conn.Config().MaxConnLifetime = 10 * 60
-	conn.Config().MaxConns = 30
-	conn.Config().MinConns = 2
+	testDB.Config().MaxConnIdleTime = 5 * 60
+	testDB.Config().MaxConnLifetime = 10 * 60
+	testDB.Config().MaxConns = 30
+	testDB.Config().MinConns = 2
 
-	testQueries = New(conn)
+	testQueries = New(testDB)
 	// jalanin test dulu dan simpan hasilnya ke test
 	test := m.Run()
 	// close database connection setelah test selesai

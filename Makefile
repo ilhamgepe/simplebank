@@ -11,8 +11,13 @@ migrate:
 
 migratedown:
 	@migrate -path db/migration -database $(DB_URL) -verbose down
+
 migratedown1:
 	@migrate -path db/migration -database $(DB_URL) -verbose down 1
+
+dbreset:
+	@migrate -path db/migration -database $(DB_URL) -verbose down -all
+	@migrate -path db/migration -database $(DB_URL) -verbose up
 
 sqlc:
 	@sqlc generate
