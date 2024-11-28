@@ -5,21 +5,26 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://root:root@localhost:5432/simple_bank?sslmode=disable"
-)
+// const (
+// 	dbDriver = "postgres"
+// 	dbSource = "postgresql://root:root@localhost:5432/simple_bank?sslmode=disable"
+// )
 
 var testQueries *Queries
 var testDB *pgxpool.Pool
 
 func TestMain(m *testing.M) {
 	var err error
+	config, err := utils.LoadConfig("../../")
+	if err != nil {
+		panic(err)
+	}
 	ctx := context.Background()
-	testDB, err = pgxpool.New(ctx, dbSource)
+	testDB, err = pgxpool.New(ctx, config.DBSource)
 	if err != nil {
 		panic(err)
 	}

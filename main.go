@@ -7,17 +7,17 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
+	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const (
-	dbDriver = "postgres"
-	dbSource = "postgresql://root:root@localhost:5432/simple_bank?sslmode=disable"
-)
-
 func main() {
+	config, err := utils.LoadConfig(".")
+	if err != nil {
+		panic(err)
+	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dbSource)
+	pool, err := pgxpool.New(ctx, config.DBSource)
 	if err != nil {
 		panic(err)
 	}
@@ -33,5 +33,5 @@ func main() {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	server := api.NewServer(db, validate)
 
-	log.Fatal(server.Start(":8080"))
+	log.Fatal(server.Start(config.ServerAddress))
 }

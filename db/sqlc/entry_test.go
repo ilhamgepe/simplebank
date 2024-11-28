@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	"github.com/ilhamgepe/simplebank/utils"
@@ -57,7 +56,6 @@ func TestListEntries(t *testing.T) {
 	}
 
 	entries, err := testQueries.ListEntries(ctx, arg)
-	log.Printf("entries: %v", entries)
 	require.NoError(t, err)
 	require.Len(t, entries, 5)
 
