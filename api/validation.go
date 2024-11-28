@@ -12,7 +12,6 @@ import (
 )
 
 func (s *Server) knownSqlError(w http.ResponseWriter, err error) {
-
 	// Cek apakah error merupakan pgconn.PgError
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

@@ -25,8 +25,11 @@ sqlc:
 test:
 	@go test -v -cover ./...
 
+mock:
+	@mockgen -package mockdb -destination db/mock/store.go github.com/ilhamgepe/simplebank/db/sqlc Store
+
 server:
 	@go run main.go
 
 
-.PHONY: pg migrateup migrate migratedown sqlc test server
+.PHONY: pg migrateup migrate migratedown sqlc test server mock

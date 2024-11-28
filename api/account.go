@@ -69,16 +69,6 @@ func (s *Server) listAccounts(w http.ResponseWriter, r *http.Request) {
 		Offset: 0,
 	}
 
-	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
-	if err == nil {
-		args.Limit = int32(limit)
-	}
-
-	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
-	if err == nil {
-		args.Offset = int32(offset)
-	}
-
 	accounts, err := s.store.GetAccounts(r.Context(), args)
 	if err != nil {
 		s.knownSqlError(w, err)

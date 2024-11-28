@@ -8,21 +8,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var txKey = struct{}{}
-
-type Store struct {
+type Store interface {
+	Querier
+	TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error)
+}
+type store struct {
 	*Queries
 	db *pgxpool.Pool
 }
 
-func NewStore(db *pgxpool.Pool) *Store {
-	return &Store{
+func NewStore(db *pgxpool.Pool) Store {
+	return &store{
 		Queries: New(db),
 		db:      db,
 	}
 }
 
-func (s *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (s *store) execTx(ctx context.Context, fn func(*Queries) error) error {
 	tx, err := s.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
@@ -56,7 +58,7 @@ type TransferTxResult struct {
 }
 
 // ini membuat catatn transfer, menambahkan account entries, update balance dalam satu kali transaction
-func (s *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
+func (s *store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferTxResult, error) {
 	var result TransferTxResult
 
 	err := s.execTx(ctx, func(q *Queries) error {
@@ -102,11 +104,8 @@ func (s *Store) TransferTx(ctx context.Context, arg TransferTxParams) (TransferT
 
 		return nil
 	})
-	if err != nil {
-		return result, err
-	}
 
-	return result, nil
+	return result, err
 }
 
 func addMoney(ctx context.Context, q *Queries, accountID1, accountID2, amount1, amount2 int64) (account1 Account, account2 Account, err error) {

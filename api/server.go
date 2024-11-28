@@ -10,12 +10,12 @@ import (
 )
 
 type Server struct {
-	store    *db.Store
+	store    db.Store
 	router   *chi.Mux
 	validate *validator.Validate
 }
 
-func NewServer(store *db.Store, validator *validator.Validate) *Server {
+func NewServer(store db.Store, validator *validator.Validate) *Server {
 	server := &Server{
 		store:    store,
 		validate: validator,
