@@ -100,4 +100,3 @@ FROM
 where a.application_name = 'psql'
 ORDER BY
   a.pid;
-

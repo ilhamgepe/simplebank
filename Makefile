@@ -25,4 +25,8 @@ sqlc:
 test:
 	@go test -v -cover ./...
 
-.PHONY: pg migrateup migrate migratedown sqlc
+server:
+	@go run main.go
+
+
+.PHONY: pg migrateup migrate migratedown sqlc test server
