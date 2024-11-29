@@ -15,10 +15,12 @@ type Server struct {
 	validate *validator.Validate
 }
 
-func NewServer(store db.Store, validator *validator.Validate) *Server {
+func NewServer(store db.Store) *Server {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	validate.RegisterValidation("currency", validCurrency)
 	server := &Server{
 		store:    store,
-		validate: validator,
+		validate: validate,
 	}
 	server.mount()
 

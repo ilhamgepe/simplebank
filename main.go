@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
 	"github.com/ilhamgepe/simplebank/utils"
@@ -30,8 +29,7 @@ func main() {
 
 	db := db.NewStore(pool)
 
-	validate := validator.New(validator.WithRequiredStructEnabled())
-	server := api.NewServer(db, validate)
+	server := api.NewServer(db)
 
 	log.Fatal(server.Start(config.ServerAddress))
 }

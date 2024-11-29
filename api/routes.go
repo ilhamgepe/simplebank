@@ -18,5 +18,10 @@ func (s *Server) mount() {
 		// r.Delete("/{id}", s.deleteAccount)
 	})
 
+	r.Route("/transfers", func(r chi.Router) {
+		r.Post("/", s.createTransfer)
+		// r.Get("/", s.listTransfers)
+	})
+
 	s.router = r
 }
