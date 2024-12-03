@@ -10,6 +10,10 @@ import (
 // 	rand.Seed( )
 // }
 
+func RandomEmail() string {
+	return RandomString(6) + "@gmail.com"
+}
+
 func RandomInt(min, max int) int {
 	return min + rand.Intn(max-min+1) // rand.Intn(10) [0, 9] jadi misal, min 5 max 10 maka 5, 6, 7, 8, 9 karena rand.Intn(5+1) [0, 5] + 5
 }

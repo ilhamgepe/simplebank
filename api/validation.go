@@ -17,7 +17,7 @@ func (s *Server) knownSqlError(w http.ResponseWriter, err error) {
 		switch pgErr.Code {
 		case "23505": // Duplicate key violation
 			// Duplikasi entri (contoh: duplikasi unique key)
-			writeJSON(w, http.StatusConflict, Response{
+			writeJSON(w, http.StatusForbidden, Response{
 				Status:  false,
 				Message: "Duplicate entry detected",
 			})
