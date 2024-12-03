@@ -3,10 +3,13 @@ DB_URL=postgresql://root:root@localhost:5432/simple_bank?sslmode=disable
 pg:
 	@docker compose up -d postgres
 
-migrateup:
+migrate:
 	@migrate create -ext sql -dir db/migration -seq $(word 2, $(MAKECMDGOALS))
 
-migrate:
+migrateup:
+	@migrate -path db/migration -database $(DB_URL) -verbose up
+
+migrateup1:
 	@migrate -path db/migration -database $(DB_URL) -verbose up
 
 migratedown:
@@ -32,4 +35,4 @@ server:
 	@go run main.go
 
 
-.PHONY: pg migrateup migrate migratedown sqlc test server mock
+.PHONY: pg migrateup migrateup1 migrate migratedown migratedown1 sqlc test server mock
