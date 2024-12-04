@@ -26,7 +26,7 @@ type createUserResponse struct {
 func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	var req createUserRequest
 	var err error
-	if res, err := s.vStruct(w, r, &req); err != nil || res != nil {
+	if res, err := s.vStruct(r, &req); err != nil || res != nil {
 		writeJSON(w, http.StatusBadRequest, Response{
 			Status: false,
 			Data:   res,

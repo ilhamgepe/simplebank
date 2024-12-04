@@ -59,7 +59,7 @@ func (s *Server) knownSqlError(w http.ResponseWriter, err error) {
 	}
 }
 
-func (s *Server) vStruct(w http.ResponseWriter, r *http.Request, data any) (result *map[string]string, err error) {
+func (s *Server) vStruct(r *http.Request, data any) (result *map[string]string, err error) {
 	// baca json dari request
 	defer r.Body.Close()
 	if err = json.NewDecoder(r.Body).Decode(data); err != nil {

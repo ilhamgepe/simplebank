@@ -15,7 +15,7 @@ type createAccountRequest struct {
 
 func (s *Server) createAccount(w http.ResponseWriter, r *http.Request) {
 	var req createAccountRequest
-	if res, err := s.vStruct(w, r, &req); err != nil || res != nil {
+	if res, err := s.vStruct(r, &req); err != nil || res != nil {
 		writeJSON(w, http.StatusBadRequest, Response{
 			Status:  false,
 			Data:    res,
