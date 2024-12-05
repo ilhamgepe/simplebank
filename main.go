@@ -29,7 +29,10 @@ func main() {
 
 	db := db.NewStore(pool)
 
-	server := api.NewServer(db)
+	server, err := api.NewServer(db, config)
+	if err != nil {
+		panic(err)
+	}
 
 	log.Fatal(server.Start(config.ServerAddress))
 }

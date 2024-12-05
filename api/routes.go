@@ -25,6 +25,7 @@ func (s *Server) mount() {
 
 	r.Route("/users", func(r chi.Router) {
 		r.Post("/", s.createUser)
+		r.Post("/login", s.loginUser)
 	})
 
 	s.router = r

@@ -92,6 +92,10 @@ func formatValidationError(e validator.FieldError) map[string]string {
 		message = field + " field must be greater than or equal to " + e.Param()
 	case "lte":
 		message = field + " field must be less than or equal to " + e.Param()
+	case "min":
+		message = field + " field must be at least " + e.Param()
+	case "max":
+		message = field + " field must be at most " + e.Param()
 	case "email":
 		message = field + " must be a valid email address"
 	case "oneof":

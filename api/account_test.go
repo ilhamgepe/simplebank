@@ -83,7 +83,7 @@ func TestGetAccountAPI(t *testing.T) {
 			store := mockdb.NewMockStore(ctrl)
 			tc.buildStubs(store)
 
-			server := NewServer(store)
+			server := newTestServer(t, store)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/%d", tc.accountID)
@@ -171,7 +171,7 @@ func TestCreateAccountAPI(t *testing.T) {
 					Return(db.Account{}, pgErr)
 			},
 			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder, req createAccountRequest) {
-				require.Equal(t, http.StatusConflict, recorder.Code)
+				require.Equal(t, http.StatusForbidden, recorder.Code)
 				require.Contains(t, recorder.Body.String(), "Duplicate entry detected")
 			},
 		},
@@ -184,7 +184,7 @@ func TestCreateAccountAPI(t *testing.T) {
 			store := mockdb.NewMockStore(ctrl)
 			tc.buildStub(store, tc.requestBody)
 
-			server := NewServer(store)
+			server := newTestServer(t, store)
 
 			recoder := httptest.NewRecorder()
 
