@@ -2,6 +2,8 @@ services:
   postgres:
     container_name: postgres
     image: postgres:17.2-alpine3.20
+    networks:
+      - bank-network
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
@@ -13,3 +15,8 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  bank-network:
+    external: true
+
