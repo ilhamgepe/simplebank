@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
+	"github.com/ilhamgepe/simplebank/token"
 )
 
 type transferRequest struct {
@@ -24,8 +25,23 @@ func (s *Server) createTransfer(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	authPayload := r.Context().Value(authPayload).(*token.Payload)
 
-	if !s.validAccount(w, r, req.FromAccountID, req.Currency) {
+	fromAccount, valid := s.validAccount(w, r, req.FromAccountID, req.Currency)
+	if !valid {
+		return
+	}
+	if fromAccount.Owner != authPayload.Username {
+		writeJSON(w, http.StatusUnauthorized, Response{
+			Status:  false,
+			Data:    nil,
+			Message: "Sender account does not belong to the authenticated user",
+		})
+		return
+	}
+
+	_, valid = s.validAccount(w, r, req.ToAccountID, req.Currency)
+	if !valid {
 		return
 	}
 
@@ -46,11 +62,11 @@ func (s *Server) createTransfer(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) validAccount(w http.ResponseWriter, r *http.Request, accountID int64, currency string) bool {
+func (s *Server) validAccount(w http.ResponseWriter, r *http.Request, accountID int64, currency string) (db.Account, bool) {
 	account, err := s.store.GetAccount(r.Context(), accountID)
 	if err != nil {
 		s.knownSqlError(w, err)
-		return false
+		return account, false
 	}
 	if account.Currency != currency {
 		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", account.ID, account.Currency, currency)
@@ -58,7 +74,7 @@ func (s *Server) validAccount(w http.ResponseWriter, r *http.Request, accountID 
 			Status:  false,
 			Message: err.Error(),
 		})
-		return false
+		return account, false
 	}
-	return true
+	return account, true
 }

@@ -8,10 +8,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
-	"github.com/go-playground/validator/v10"
 	mockdb "github.com/ilhamgepe/simplebank/db/mock"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
+	"github.com/ilhamgepe/simplebank/token"
 	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,20 +20,20 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-var validate = validator.New(validator.WithRequiredStructEnabled())
-
 func TestGetAccountAPI(t *testing.T) {
 	account := randomAccount()
 
 	testCases := []struct {
 		name          string
 		accountID     int64
+		accountOwner  string
 		buildStubs    func(store *mockdb.MockStore)
 		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
 	}{
 		{
-			name:      "OK",
-			accountID: account.ID,
+			name:         "OK",
+			accountID:    account.ID,
+			accountOwner: account.Owner,
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetAccount(gomock.Any(), gomock.Eq(account.ID)).
@@ -45,8 +46,9 @@ func TestGetAccountAPI(t *testing.T) {
 			},
 		},
 		{
-			name:      "Invalid ID",
-			accountID: -100,
+			name:         "Invalid ID",
+			accountID:    -100,
+			accountOwner: account.Owner,
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetAccount(gomock.Any(), gomock.Any()).
@@ -58,8 +60,9 @@ func TestGetAccountAPI(t *testing.T) {
 			},
 		},
 		{
-			name:      "Not Found",
-			accountID: 9999,
+			name:         "Not Found",
+			accountID:    9999,
+			accountOwner: account.Owner,
 			buildStubs: func(store *mockdb.MockStore) {
 				store.EXPECT().
 					GetAccount(gomock.Any(), gomock.Any()).
@@ -84,11 +87,16 @@ func TestGetAccountAPI(t *testing.T) {
 			tc.buildStubs(store)
 
 			server := newTestServer(t, store)
+			maker, err := token.NewPasetoMaker(server.config.TokenSymmetricKey)
+			require.NoError(t, err)
 			recorder := httptest.NewRecorder()
 
 			url := fmt.Sprintf("/accounts/%d", tc.accountID)
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
+			token, err := maker.CreateToken(tc.accountOwner, time.Minute)
+			require.NoError(t, err)
+			request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
 			server.router.ServeHTTP(recorder, request)
 			// check response
@@ -195,8 +203,14 @@ func TestCreateAccountAPI(t *testing.T) {
 
 			request, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(body))
 			require.NoError(t, err)
+			maker, err := token.NewPasetoMaker(server.config.TokenSymmetricKey)
+			require.NoError(t, err)
 
 			request.Header.Set("Content-Type", "application/json")
+
+			token, err := maker.CreateToken(utils.RandomOwner(), time.Minute)
+			require.NoError(t, err)
+			request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
 			server.router.ServeHTTP(recoder, request)
 
@@ -235,17 +249,17 @@ func randomAccount() db.Account {
 	}
 }
 
-func randomAccounts(count int) []db.Account {
-	var accounts []db.Account
-	for i := 0; i < count; i++ {
-		account := db.Account{
-			ID:       int64(utils.RandomInt(1, 1000)),
-			Owner:    utils.RandomOwner(),
-			Balance:  utils.RandomMoney(),
-			Currency: utils.RandomCurrency(),
-		}
-		accounts = append(accounts, account)
-	}
+// func randomAccounts(count int) []db.Account {
+// 	var accounts []db.Account
+// 	for i := 0; i < count; i++ {
+// 		account := db.Account{
+// 			ID:       int64(utils.RandomInt(1, 1000)),
+// 			Owner:    utils.RandomOwner(),
+// 			Balance:  utils.RandomMoney(),
+// 			Currency: utils.RandomCurrency(),
+// 		}
+// 		accounts = append(accounts, account)
+// 	}
 
-	return accounts
-}
+// 	return accounts
+// }

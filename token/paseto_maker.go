@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/o1egl/paseto"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -48,7 +47,6 @@ func (maker *PasetoMaker) VerifyToken(token string) (*Payload, error) {
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
-	utils.LogStructAsJSON("payload", payload)
 
 	err = payload.valid()
 	if err != nil {

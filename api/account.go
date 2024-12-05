@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
+	"github.com/ilhamgepe/simplebank/token"
 )
 
 type createAccountRequest struct {
@@ -55,9 +56,20 @@ func (s *Server) getAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authPayload := r.Context().Value(authPayload).(*token.Payload)
+
 	account, err := s.store.GetAccount(r.Context(), int64(idInt))
 	if err != nil {
 		s.knownSqlError(w, err)
+		return
+	}
+
+	if account.Owner != authPayload.Username {
+		writeJSON(w, http.StatusUnauthorized, Response{
+			Status:  false,
+			Data:    nil,
+			Message: "Unauthorized",
+		})
 		return
 	}
 
@@ -73,7 +85,35 @@ func (s *Server) listAccounts(w http.ResponseWriter, r *http.Request) {
 		Limit:  5,
 		Offset: 0,
 	}
+	limit := r.URL.Query().Get("limit")
+	if limit != "" {
+		tempLimit, err := strconv.Atoi(limit)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, Response{
+				Status:  false,
+				Message: "Invalid Limit",
+				Data:    "Bad Request",
+			})
+			return
+		}
+		args.Limit = int32(tempLimit)
+	}
 
+	offset := r.URL.Query().Get("offset")
+	if offset != "" {
+		tempOffset, err := strconv.Atoi(offset)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, Response{
+				Status:  false,
+				Message: "Invalid Offset",
+				Data:    "Bad Request",
+			})
+			return
+		}
+		args.Offset = int32(tempOffset)
+	}
+	authPayload := r.Context().Value(authPayload).(*token.Payload)
+	args.Owner = authPayload.Username
 	accounts, err := s.store.GetAccounts(r.Context(), args)
 	if err != nil {
 		s.knownSqlError(w, err)
