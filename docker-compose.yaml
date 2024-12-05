@@ -2,21 +2,25 @@ services:
   postgres:
     container_name: postgres
     image: postgres:17.2-alpine3.20
-    networks:
-      - bank-network
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
       - POSTGRES_DB=simple_bank
     ports:
       - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
 
-volumes:
-  pgdata:
+  api:
+    container_name: api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_SOURCE=postgresql://root:root@postgres:5432/simple_bank?sslmode=disable
+    depends_on:
+      - postgres
+    entrypoint: ["/app/wait-for.sh", "postgres:5432", "--", "/app/main"]
+    command: ["/app/main"]
 
-networks:
-  bank-network:
-    external: true
 
