@@ -101,7 +101,7 @@ func newTestRouter(authMiddleware func(http.Handler) http.Handler) *chi.Mux {
 }
 
 func addAuthorization(t *testing.T, request *http.Request, tokenMaker token.Maker, authorizationType string, username string, duration time.Duration) {
-	token, err := tokenMaker.CreateToken(username, duration)
+	token, _, err := tokenMaker.CreateToken(username, duration)
 	require.NoError(t, err)
 	request.Header.Add("Authorization", fmt.Sprintf("%s %s", authorizationType, token))
 }

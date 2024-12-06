@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
 	"github.com/ilhamgepe/simplebank/utils"
 )
@@ -18,6 +19,7 @@ type createUserRequest struct {
 type userResponse struct {
 	Username         string    `json:"username"`
 	FullName         string    `json:"full_name"`
+	Email            string    `json:"email"`
 	PasswordChangeAt time.Time `json:"password_change_at"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
@@ -52,6 +54,7 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request) {
 	rsp := userResponse{
 		Username:         user.Username,
 		FullName:         user.FullName,
+		Email:            user.Email,
 		PasswordChangeAt: user.PasswordChangeAt,
 		CreatedAt:        user.CreatedAt,
 		UpdatedAt:        user.UpdatedAt,
@@ -70,8 +73,12 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	AccessToken string `json:"access_token"`
-	User        userResponse
+	SessionID             uuid.UUID `json:"session_id"`
+	AccessToken           string    `json:"access_token"`
+	AccessTokenExpiresAt  time.Time `json:"access_token_expires_at"`
+	RefreshToken          string    `json:"refresh_token"`
+	RefreshTokenExpiresAt time.Time `json:"refresh_token_expires_at"`
+	User                  userResponse
 }
 
 func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +108,33 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := s.tokenMaker.CreateToken(user.Username, s.config.AccessTokenDuration)
+	accessToken, accessPayload, err := s.tokenMaker.CreateToken(user.Username, s.config.AccessTokenDuration)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, Response{
+			Status: false,
+			Data:   err.Error(),
+		})
+		return
+	}
+	refreshToken, refreshPayload, err := s.tokenMaker.CreateToken(user.Username, s.config.RefreshTokenDuration)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, Response{
+			Status: false,
+			Data:   err.Error(),
+		})
+		return
+	}
+
+	// creating session
+	session, err := s.store.CreateSession(r.Context(), db.CreateSessionParams{
+		ID:           refreshPayload.ID,
+		Username:     refreshPayload.Username,
+		RefreshToken: refreshToken,
+		UserAgent:    r.UserAgent(),
+		ClientIp:     r.RemoteAddr,
+		IsBlocked:    false,
+		ExpiresAt:    refreshPayload.ExpiresAt.Time,
+	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, Response{
 			Status: false,
@@ -111,10 +144,15 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rsp := loginUserResponse{
-		AccessToken: accessToken,
+		SessionID:             session.ID,
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessPayload.ExpiresAt.Time,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshPayload.ExpiresAt.Time,
 		User: userResponse{
 			Username:         user.Username,
 			FullName:         user.FullName,
+			Email:            user.Email,
 			PasswordChangeAt: user.PasswordChangeAt,
 			CreatedAt:        user.CreatedAt,
 			UpdatedAt:        user.UpdatedAt,

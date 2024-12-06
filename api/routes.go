@@ -9,12 +9,14 @@ func (s *Server) mount() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.RealIP)
 
 	// without authentication middleware
 	r.Group(func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", s.createUser)
 			r.Post("/login", s.loginUser)
+			r.Post("/refresh", s.renewAccessToken)
 		})
 	})
 

@@ -94,7 +94,7 @@ func TestGetAccountAPI(t *testing.T) {
 			url := fmt.Sprintf("/accounts/%d", tc.accountID)
 			request, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)
-			token, err := maker.CreateToken(tc.accountOwner, time.Minute)
+			token, _, err := maker.CreateToken(tc.accountOwner, time.Minute)
 			require.NoError(t, err)
 			request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
@@ -208,7 +208,7 @@ func TestCreateAccountAPI(t *testing.T) {
 
 			request.Header.Set("Content-Type", "application/json")
 
-			token, err := maker.CreateToken(utils.RandomOwner(), time.Minute)
+			token, _, err := maker.CreateToken(utils.RandomOwner(), time.Minute)
 			require.NoError(t, err)
 			request.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
 
