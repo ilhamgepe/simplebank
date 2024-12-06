@@ -2,12 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net"
+
+	"google.golang.org/grpc/reflection"
 
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
+	"github.com/ilhamgepe/simplebank/gapi"
+	"github.com/ilhamgepe/simplebank/pb"
 	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -29,10 +36,36 @@ func main() {
 
 	db := db.NewStore(pool)
 
+	runGrpcServer(db, config)
+
+}
+
+func runGrpcServer(db db.Store, config utils.Config) {
+	server, err := gapi.NewServer(db, config)
+	if err != nil {
+		panic(err)
+	}
+
+	grpcServer := grpc.NewServer()
+	pb.RegisterSimpleBankServer(grpcServer, server)
+	reflection.Register(grpcServer) //agar gprc client bisa tau ada apaaja di dalem grpc servernya
+
+	listener, err := net.Listen("tcp", config.GRPCServerAddress)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("start gRPC server at %s", listener.Addr().String())
+
+	err = grpcServer.Serve(listener)
+	if err != nil {
+		panic(err)
+	}
+}
+func runHttpServer(db db.Store, config utils.Config) {
 	server, err := api.NewServer(db, config)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Fatal(server.Start(config.ServerAddress))
+	log.Fatal(server.Start(config.HTTPServerAddress))
 }

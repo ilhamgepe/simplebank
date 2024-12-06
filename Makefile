@@ -34,5 +34,11 @@ mock:
 server:
 	@go run main.go
 
+proto:
+	@rm -rf pb/*.go
+	protoc --proto_path=proto --go_out=pb --go_opt=paths=source_relative \
+    --go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+    proto/*.proto
 
-.PHONY: pg migrateup migrateup1 migrate migratedown migratedown1 sqlc test server mock
+
+.PHONY: pg migrateup migrateup1 migrate migratedown migratedown1 sqlc test server mock proto
