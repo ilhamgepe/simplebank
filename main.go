@@ -10,6 +10,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
@@ -37,11 +40,26 @@ func main() {
 	pool.Config().MaxConns = 30
 	pool.Config().MinConns = 2
 
+	// run migration
+	runDBMigration(config.MigrationURL, config.DBSource)
+
 	db := db.NewStore(pool)
 
 	go runGatewayServer(db, config)
 	runGrpcServer(db, config)
+}
 
+func runDBMigration(migrationUrl, dbSource string) {
+	m, err := migrate.New(migrationUrl, dbSource)
+	if err != nil {
+		log.Fatalf("failed to create migrate instance: %v", err)
+	}
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("failed to run migration up: %v\n", err)
+	}
+
+	log.Println("db migrated successfully")
 }
 
 func runGrpcServer(db db.Store, config utils.Config) {
@@ -52,7 +70,7 @@ func runGrpcServer(db db.Store, config utils.Config) {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterSimpleBankServer(grpcServer, server)
-	reflection.Register(grpcServer) //agar gprc client bisa tau ada apaaja di dalem grpc servernya
+	reflection.Register(grpcServer) // agar gprc client bisa tau ada apaaja di dalem grpc servernya
 
 	listener, err := net.Listen("tcp", config.GRPCServerAddress)
 	if err != nil {
@@ -65,6 +83,7 @@ func runGrpcServer(db db.Store, config utils.Config) {
 		log.Fatalf("failed to serve: %v\n", err)
 	}
 }
+
 func runGatewayServer(db db.Store, config utils.Config) {
 	server, err := gapi.NewServer(db, config)
 	if err != nil {
@@ -103,6 +122,7 @@ func runGatewayServer(db db.Store, config utils.Config) {
 		log.Fatalf("cannot start HTTP gateway server: %v\n", err)
 	}
 }
+
 func runHttpServer(db db.Store, config utils.Config) {
 	server, err := api.NewServer(db, config)
 	if err != nil {
