@@ -57,3 +57,55 @@ func TestGetUser(t *testing.T) {
 	require.WithinDuration(t, user1.CreatedAt, user2.CreatedAt, time.Minute)
 	require.WithinDuration(t, user1.UpdatedAt, user2.UpdatedAt, time.Minute)
 }
+
+func TestUpdateUserOnlyFullName(t *testing.T) {
+	oldUser := createRandomUser(t)
+
+	newFullname := utils.RandomOwner()
+	newuser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		FullName: utils.NewNullableString(newFullname),
+		Username: oldUser.Username,
+	})
+	require.NoError(t, err)
+	require.Equal(t, oldUser.Username, newuser.Username)
+	require.Equal(t, oldUser.Email, newuser.Email)
+	require.Equal(t, newFullname, newuser.FullName)
+	require.Equal(t, oldUser.Password, newuser.Password)
+	require.WithinDuration(t, oldUser.CreatedAt, newuser.CreatedAt, time.Minute)
+	require.WithinDuration(t, oldUser.UpdatedAt, newuser.UpdatedAt, time.Minute)
+}
+
+func TestUpdateUserOnlyEmail(t *testing.T) {
+	oldUser := createRandomUser(t)
+
+	newEmail := utils.RandomEmail()
+	newuser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		Email:    utils.NewNullableString(newEmail),
+		Username: oldUser.Username,
+	})
+	require.NoError(t, err)
+	require.Equal(t, oldUser.Username, newuser.Username)
+	require.Equal(t, newEmail, newuser.Email)
+	require.Equal(t, oldUser.FullName, newuser.FullName)
+	require.Equal(t, oldUser.Password, newuser.Password)
+	require.WithinDuration(t, oldUser.CreatedAt, newuser.CreatedAt, time.Minute)
+	require.WithinDuration(t, oldUser.UpdatedAt, newuser.UpdatedAt, time.Minute)
+}
+
+func TestUpdateUserOnlyPassword(t *testing.T) {
+	oldUser := createRandomUser(t)
+
+	newPassword, err := utils.HashPassword(utils.RandomString(12))
+	require.NoError(t, err)
+	newuser, err := testQueries.UpdateUser(context.Background(), UpdateUserParams{
+		Password: utils.NewNullableString(newPassword),
+		Username: oldUser.Username,
+	})
+	require.NoError(t, err)
+	require.Equal(t, oldUser.Username, newuser.Username)
+	require.Equal(t, oldUser.Email, newuser.Email)
+	require.Equal(t, oldUser.FullName, newuser.FullName)
+	require.Equal(t, newPassword, newuser.Password)
+	require.WithinDuration(t, oldUser.CreatedAt, newuser.CreatedAt, time.Minute)
+	require.WithinDuration(t, oldUser.UpdatedAt, newuser.UpdatedAt, time.Minute)
+}
