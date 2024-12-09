@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
 	"github.com/ilhamgepe/simplebank/gapi"
@@ -36,6 +39,7 @@ func main() {
 
 	db := db.NewStore(pool)
 
+	go runGatewayServer(db, config)
 	runGrpcServer(db, config)
 
 }
@@ -43,7 +47,7 @@ func main() {
 func runGrpcServer(db db.Store, config utils.Config) {
 	server, err := gapi.NewServer(db, config)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to create server: %v", err)
 	}
 
 	grpcServer := grpc.NewServer()
@@ -52,19 +56,57 @@ func runGrpcServer(db db.Store, config utils.Config) {
 
 	listener, err := net.Listen("tcp", config.GRPCServerAddress)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to listen: %v\n", err)
 	}
-	fmt.Printf("start gRPC server at %s", listener.Addr().String())
+	fmt.Printf("start gRPC server at %s\n", listener.Addr().String())
 
 	err = grpcServer.Serve(listener)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to serve: %v\n", err)
+	}
+}
+func runGatewayServer(db db.Store, config utils.Config) {
+	server, err := gapi.NewServer(db, config)
+	if err != nil {
+		log.Fatalf("failed to create server: %v\n", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	jsonOption := runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+		MarshalOptions: protojson.MarshalOptions{
+			UseProtoNames: true,
+		},
+		UnmarshalOptions: protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		},
+	})
+
+	grpcMux := runtime.NewServeMux(jsonOption)
+	err = pb.RegisterSimpleBankHandlerServer(ctx, grpcMux, server)
+	if err != nil {
+		log.Fatalf("failed to register handler server: %v\n", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/", grpcMux)
+
+	listener, err := net.Listen("tcp", config.HTTPServerAddress)
+	if err != nil {
+		log.Fatalf("failed to listen: %v\n", err)
+	}
+	fmt.Printf("start HTTP gateway server at %s\n", listener.Addr().String())
+
+	err = http.Serve(listener, mux)
+	if err != nil {
+		log.Fatalf("cannot start HTTP gateway server: %v\n", err)
 	}
 }
 func runHttpServer(db db.Store, config utils.Config) {
 	server, err := api.NewServer(db, config)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to create server: %v\n", err)
 	}
 
 	log.Fatal(server.Start(config.HTTPServerAddress))
