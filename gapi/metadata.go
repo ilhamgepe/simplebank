@@ -2,7 +2,6 @@ package gapi
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
@@ -40,7 +39,6 @@ func (s *Server) extractMetadata(ctx context.Context) *Metadata {
 
 	// karna dari metadata ga dapet ip client jika hit pake grpc, kita pake peer
 	if peer, ok := peer.FromContext(ctx); ok {
-		log.Printf("peer: %v", peer)
 		if addr := peer.Addr.String(); addr != "" {
 			md.ClientIP = addr
 		}

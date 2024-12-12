@@ -2,10 +2,9 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -20,19 +19,29 @@ import (
 	"github.com/ilhamgepe/simplebank/pb"
 	"github.com/ilhamgepe/simplebank/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
 
 func main() {
+	ctx := context.Background()
+
 	config, err := utils.LoadConfig(".")
 	if err != nil {
 		panic(err)
 	}
-	ctx := context.Background()
+
+	if config.Env == "development" {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	}
+
 	pool, err := pgxpool.New(ctx, config.DBSource)
 	if err != nil {
 		panic(err)
 	}
+
 	defer pool.Close()
 
 	pool.Config().MaxConnIdleTime = 5 * 60
@@ -52,42 +61,44 @@ func main() {
 func runDBMigration(migrationUrl, dbSource string) {
 	m, err := migrate.New(migrationUrl, dbSource)
 	if err != nil {
-		log.Fatalf("failed to create migrate instance: %v", err)
+		log.Fatal().Err(err).Msg("failed to create migrate instance")
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("failed to run migration up: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to run migration up")
 	}
 
-	log.Println("db migrated successfully")
+	log.Info().Msg("db migrated successfully")
 }
 
 func runGrpcServer(db db.Store, config utils.Config) {
 	server, err := gapi.NewServer(db, config)
 	if err != nil {
-		log.Fatalf("failed to create server: %v", err)
+		log.Fatal().Err(err).Msg("failed to create gRPC server")
 	}
-
-	grpcServer := grpc.NewServer()
+	log.Info().Msg("gRPC server started")
+	grpcLogger := grpc.UnaryInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		return gapi.GrpcLogger(ctx, req, info, handler)
+	})
+	grpcServer := grpc.NewServer(grpcLogger)
 	pb.RegisterSimpleBankServer(grpcServer, server)
 	reflection.Register(grpcServer) // agar gprc client bisa tau ada apaaja di dalem grpc servernya
 
 	listener, err := net.Listen("tcp", config.GRPCServerAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to listen")
 	}
-	fmt.Printf("start gRPC server at %s\n", listener.Addr().String())
-
+	log.Info().Msg("start gRPC server at " + listener.Addr().String())
 	err = grpcServer.Serve(listener)
 	if err != nil {
-		log.Fatalf("failed to serve: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to serve")
 	}
 }
 
 func runGatewayServer(db db.Store, config utils.Config) {
 	server, err := gapi.NewServer(db, config)
 	if err != nil {
-		log.Fatalf("failed to create server: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to create server")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -105,7 +116,7 @@ func runGatewayServer(db db.Store, config utils.Config) {
 	grpcMux := runtime.NewServeMux(jsonOption)
 	err = pb.RegisterSimpleBankHandlerServer(ctx, grpcMux, server)
 	if err != nil {
-		log.Fatalf("failed to register handler server: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to register handler")
 	}
 
 	mux := http.NewServeMux()
@@ -113,21 +124,24 @@ func runGatewayServer(db db.Store, config utils.Config) {
 
 	listener, err := net.Listen("tcp", config.HTTPServerAddress)
 	if err != nil {
-		log.Fatalf("failed to listen: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to listen")
 	}
-	fmt.Printf("start HTTP gateway server at %s\n", listener.Addr().String())
+	log.Info().Msg("start HTTP gateway server at " + listener.Addr().String())
 
 	err = http.Serve(listener, mux)
 	if err != nil {
-		log.Fatalf("cannot start HTTP gateway server: %v\n", err)
+		log.Fatal().Err(err).Msg("cannot start HTTP gateway server")
 	}
 }
 
 func runHttpServer(db db.Store, config utils.Config) {
 	server, err := api.NewServer(db, config)
 	if err != nil {
-		log.Fatalf("failed to create server: %v\n", err)
+		log.Fatal().Err(err).Msg("failed to create server")
 	}
-
-	log.Fatal(server.Start(config.HTTPServerAddress))
+	err = server.Start(config.HTTPServerAddress)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start server")
+	}
+	log.Info().Msg("start HTTP server at " + config.HTTPServerAddress)
 }
