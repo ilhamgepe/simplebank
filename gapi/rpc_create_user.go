@@ -44,25 +44,26 @@ func (s *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb
 		}
 	}
 
+	// Send verification email to user
+
 	rsp := &pb.CreateUserResponse{
 		User: convertUser(user),
 	}
 	return rsp, nil
 }
 
-
 func validateCreateUserRequest(req *pb.CreateUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
 	if err := val.ValidateUsername(req.GetUsername()); err != nil {
-		violations = append(violations,fieldViolation("username",err))
+		violations = append(violations, fieldViolation("username", err))
 	}
 	if err := val.ValidatePassword(req.GetPassword()); err != nil {
-		violations = append(violations,fieldViolation("password",err))
+		violations = append(violations, fieldViolation("password", err))
 	}
 	if err := val.ValidateFullname(req.GetFullName()); err != nil {
-		violations = append(violations,fieldViolation("full_name",err))
+		violations = append(violations, fieldViolation("full_name", err))
 	}
 	if err := val.ValidateEmail(req.GetEmail()); err != nil {
-		violations = append(violations,fieldViolation("email",err))
+		violations = append(violations, fieldViolation("email", err))
 	}
 
 	return violations
