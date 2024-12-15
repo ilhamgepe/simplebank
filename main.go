@@ -13,11 +13,13 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/hibiken/asynq"
 	"github.com/ilhamgepe/simplebank/api"
 	db "github.com/ilhamgepe/simplebank/db/sqlc"
 	"github.com/ilhamgepe/simplebank/gapi"
 	"github.com/ilhamgepe/simplebank/pb"
 	"github.com/ilhamgepe/simplebank/utils"
+	"github.com/ilhamgepe/simplebank/worker"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -54,8 +56,15 @@ func main() {
 
 	db := db.NewStore(pool)
 
-	go runGatewayServer(db, config)
-	runGrpcServer(db, config)
+	redisOpt := asynq.RedisClientOpt{
+		Addr: config.RedisAddress,
+	}
+
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+
+	go runTaskProcessor(redisOpt, db)
+	go runGatewayServer(db, config, taskDistributor)
+	runGrpcServer(db, config, taskDistributor)
 }
 
 func runDBMigration(migrationUrl, dbSource string) {
@@ -71,8 +80,17 @@ func runDBMigration(migrationUrl, dbSource string) {
 	log.Info().Msg("db migrated successfully")
 }
 
-func runGrpcServer(db db.Store, config utils.Config) {
-	server, err := gapi.NewServer(db, config)
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	taskProcessor := worker.NewRedisTaskProcessor(redisOpt, store)
+	log.Info().Msg("start task processor")
+	err := taskProcessor.Start()
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start task processor")
+	}
+}
+
+func runGrpcServer(db db.Store, config utils.Config, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(db, config, taskDistributor)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create gRPC server")
 	}
@@ -95,8 +113,8 @@ func runGrpcServer(db db.Store, config utils.Config) {
 	}
 }
 
-func runGatewayServer(db db.Store, config utils.Config) {
-	server, err := gapi.NewServer(db, config)
+func runGatewayServer(db db.Store, config utils.Config, taskDistributor worker.TaskDistributor) {
+	server, err := gapi.NewServer(db, config, taskDistributor)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create server")
 	}

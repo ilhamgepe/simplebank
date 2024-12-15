@@ -17,6 +17,8 @@ type TaskDistributor interface {
 		payload *PayloadSendVerifyEmail,
 		opts ...asynq.Option,
 	) error
+
+	CloseClient() error
 }
 
 type RedisTaskDistributor struct {

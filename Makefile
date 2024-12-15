@@ -42,5 +42,7 @@ proto:
 	--grpc-gateway_opt=paths=source_relative \
     proto/*.proto
 
+redis:
+	@docker run --name redis -p 6379:6379 -d redis:8.0-M02-alpine
 
-.PHONY: pg migrateup migrateup1 migrate migratedown migratedown1 sqlc test server mock proto
+.PHONY: pg migrateup migrateup1 migrate migratedown migratedown1 sqlc test server mock proto redis
